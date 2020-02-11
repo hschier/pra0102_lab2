@@ -99,7 +99,7 @@ class OccupancyGripMap:
         self.map_msg.data = self.np_map.flatten()
         self.map_pub.publish(self.map_msg)
 
-    def ray_trace_update(self, map, log_odds, x_start, y_start, angle, range_mes):
+    def ray_trace_update(self, map, log_odds, x_start, y_start, angle, range_mes, scan_msg):
         """
         A ray tracing grid update as described in the lab document.
 
@@ -115,11 +115,22 @@ class OccupancyGripMap:
         # YOUR CODE HERE!!! You should modify the log_odds object and the numpy map based on the outputs from
         # ray_trace and the equations from class. Your numpy map must be an array of int8s with 0 to 100 representing
         # probability of occupancy, and -1 representing unknown.
-        rr, cc = ray_trace (x_start, y_start, x_start + np.cos(angle)*range_mes, y_start + np.sin(angle)*range_mes)
 
+        end_cell = 
+        
+        if range_mes == 0.0:
+            rr, cc = ray_trace (x_start, y_start, x_start + np.cos(angle)*scan_msg.range_max, y_start + np.sin(angle)*scan_msg.range_max)
+        else:
+            rr, cc = ray_trace (x_start, y_start, x_start + np.cos(angle)*range_mes, y_start + np.sin(angle)*range_mes)
+        
         for i in range (len(rr)-1):
-            log_odds [rr[i]][cc[i]] = log_odds [rr[i]][cc[i]] - BETA
-        log_odds [rr[-1]][cc[-1]] = log_odds[rr[-1]][cc[-1]] + ALPHA
+            cell = []
+            if 0 <= cell[0] < MAP_DIM[0]/CELL_SIZE && 0 <= cell[1] < MAP_DIM[1]/CELL_SIZE:
+
+                log_odds [rr[i]][cc[i]] = log_odds [rr[i]][cc[i]] - BETA
+        if 0 <= rr[-1] < MAP_DIM[0] && 0 <= cc[-1] < MAP_DIM[1]:
+            if range_mes != 0.0:
+                log_odds [rr[-1]][cc[-1]] = log_odds[rr[-1]][cc[-1]] + ALPHA
 
         map = self.log_odds_to_probability(log_odds)
         return map, log_odds
