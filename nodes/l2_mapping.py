@@ -90,9 +90,9 @@ class OccupancyGripMap:
         # YOUR CODE HERE!!! Loop through each measurement in scan_msg to get the correct angle and
         # x_start and y_start to send to your ray_trace_update function.
 
-
-
-
+        for range, index in enumerate(scan_msg.ranges):
+            angle = odom_map[2] + scan_msg.angle_min + index*scan_msg.angle_increment
+            self.np_map, self.log_odds = self.ray_trace_update (self, self.np_map, self.log_odds, odom_map[0], odom_map[1], angle, range)
 
         # publish the message
         self.map_msg.info.map_load_time = rospy.Time.now()
@@ -115,11 +115,13 @@ class OccupancyGripMap:
         # YOUR CODE HERE!!! You should modify the log_odds object and the numpy map based on the outputs from
         # ray_trace and the equations from class. Your numpy map must be an array of int8s with 0 to 100 representing
         # probability of occupancy, and -1 representing unknown.
+        rr, cc = ray_trace (x_start, y_start, x_start + np.cos(angle)*range_mes, y_start + np.sin(angle)*range_mes)
 
+        for i in range (len(rr)-1):
+            log_odds [rr[i]][cc[i]] = log_odds [rr[i]][cc[i]] - BETA
+        log_odds [rr[-1]][cc[-1]] = log_odds[rr[-1]][cc[-1]] + ALPHA
 
-
-
-
+        map = self.log_odds_to_probability(log_odds)
         return map, log_odds
 
     def log_odds_to_probability(self, values):
