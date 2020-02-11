@@ -70,18 +70,20 @@ class WheelOdom:
 
             # using equations from lecture, integrate the motion forward
 
-            # YOUR CODE HERE!!! Set self.pose.position and self.pose.orientation
+            dl = (le - self.last_enc_l) * ENC_TICKS * 2 * 3.14159 * WHEEL_RADIUS
+            dr = (re - self.last_enc_r) * ENC_TICKS * 2 * 3.14159 * WHEEL_RADIUS
 
+            dx = 0.5 * (dl + dr)
+            dz = dr - dl
 
-
+            self.pose.position.x += dx
+            self.pose.orientation.z += dz
 
             # update velocity
 
-            # YOUR CODE HERE!!! Sef self.twist.linear and self.twist.angular
-
-
-
-
+            dt = sensor_state_msg.header.stamp - self.last_time
+            self.twist.linear = dx/dt
+            self.twist.angular = dz/dt
 
             # publish the updates as a topic and in the tf tree
             current_time = rospy.Time.now()
