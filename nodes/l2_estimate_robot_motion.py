@@ -70,20 +70,31 @@ class WheelOdom:
 
             # using equations from lecture, integrate the motion forward
 
-            dl = (le - self.last_enc_l) * ENC_TICKS * 2 * 3.14159 * WHEEL_RADIUS
-            dr = (re - self.last_enc_r) * ENC_TICKS * 2 * 3.14159 * WHEEL_RADIUS
+            dl = (le - self.last_enc_l) / ENC_TICKS * 2 * np.pi * WHEEL_RADIUS
+            dr = (re - self.last_enc_r) / ENC_TICKS * 2 * np.pi * WHEEL_RADIUS
 
-            dx = 0.5 * (dl + dr)
-            dz = dr - dl
+            d_dist = 0.5 * (dl + dr)
+            dz = 0.5 * (dr - dl) / BASELINE
 
-            self.pose.position.x += dx
-            self.pose.orientation.z += dz
+            self.pose.position.x += d_dist * np.cos(self.pose.orientation.z)
+            self.pose.position.y += d_dist * np.sin(self.pose.orientation.z)
+
+            e_angle = euler_from_ros_quat(self.pose.orientation)
+            e_angle = np.array(e_angle) + np.array((0, 0, dz))
+            self.pose.orientation = ros_quat_from_euler(e_angle)
 
             # update velocity
 
-            dt = sensor_state_msg.header.stamp - self.last_time
-            self.twist.linear = dx/dt
-            self.twist.angular = dz/dt
+            dt = sensor_state_msg.header.stamp.to_sec() - self.last_time.to_sec()
+
+            self.twist.linear.x = d_dist/dt
+            self.twist.angular.z = dz/dt
+
+            rospy.loginfo("le %s re %s dl %s dr %s dt %s dz %s", le, re, dl, dr, dt, dz)
+
+            self.last_enc_l = le
+            self.last_enc_r = re
+            self.last_time = sensor_state_msg.header.stamp
 
             # publish the updates as a topic and in the tf tree
             current_time = rospy.Time.now()

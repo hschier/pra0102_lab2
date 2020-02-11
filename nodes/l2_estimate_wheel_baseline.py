@@ -76,8 +76,8 @@ class wheelBaselineEstimator():
             
             #YOUR CODE HERE!
             #Calculate the wheel baseline here
-            b = (WHEEL_RADIUS / 2) * (self.del_right_encoder - self.del_left_encoder) / ( NUM_ROTATIONS * 2 * 3.141592653589793238462643383279502884197169399375105820974944592307816406286)
-            print("baseline: ", b, " radius ", r)
+            b = (WHEEL_RADIUS / 2) * (((self.del_right_encoder - self.del_left_encoder) / TICKS_PER_ROTATION) * 2 * 3.141592653589793238462643383279502884197169399375105820974944592307816406286) / ( NUM_ROTATIONS * 2 * 3.141592653589793238462643383279502884197169399375105820974944592307816406286)
+            print("baseline: ", b)
             #Reset the robot and calibration routine
             self.left_encoder_prev = None
             self.right_encoder_prev = None

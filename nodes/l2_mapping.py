@@ -92,7 +92,7 @@ class OccupancyGripMap:
 
         for range, index in enumerate(scan_msg.ranges):
             angle = odom_map[2] + scan_msg.angle_min + index*scan_msg.angle_increment
-            self.np_map, self.log_odds = self.ray_trace_update (self.np_map, self.log_odds, odom_map[0], odom_map[1], angle, range)
+            self.np_map, self.log_odds = self.ray_trace_update (self.np_map, self.log_odds, odom_map[0], odom_map[1], angle, range, scan_msg)
 
         # publish the message
         self.map_msg.info.map_load_time = rospy.Time.now()
@@ -115,22 +115,23 @@ class OccupancyGripMap:
         # YOUR CODE HERE!!! You should modify the log_odds object and the numpy map based on the outputs from
         # ray_trace and the equations from class. Your numpy map must be an array of int8s with 0 to 100 representing
         # probability of occupancy, and -1 representing unknown.
-
-        end_cell = 
-        
+        x_index = np.around(x_start, decimals = 2)/CELL_SIZE
+        y_index = np.around(y_start, decimals = 2)/CELL_SIZE
         if range_mes == 0.0:
-            rr, cc = ray_trace (x_start, y_start, x_start + np.cos(angle)*scan_msg.range_max, y_start + np.sin(angle)*scan_msg.range_max)
-        else:
-            rr, cc = ray_trace (x_start, y_start, x_start + np.cos(angle)*range_mes, y_start + np.sin(angle)*range_mes)
-        
-        for i in range (len(rr)-1):
-            cell = []
-            if 0 <= cell[0] < MAP_DIM[0]/CELL_SIZE && 0 <= cell[1] < MAP_DIM[1]/CELL_SIZE:
+            range_mes = scan_msg.range_max
+        endCell = np.around(np.array([x_start + np.cos(angle)*range_mes, y_start + np.sin(angle)*range_mes]), decimals = 2)
+        endCell = endCell/CELL_SIZE
+        endCell = np.int_(endCell)
 
+        
+        rr, cc = ray_trace (x_index, y_index, endCell[0], endCell[1])
+
+        for i in range (len(rr)-1):
+            if 0 <= rr[i] < MAP_DIM[0]/CELL_SIZE and 0 <= cc[i] < MAP_DIM[1]/CELL_SIZE:
                 log_odds [rr[i]][cc[i]] = log_odds [rr[i]][cc[i]] - BETA
-        if 0 <= rr[-1] < MAP_DIM[0] && 0 <= cc[-1] < MAP_DIM[1]:
-            if range_mes != 0.0:
-                log_odds [rr[-1]][cc[-1]] = log_odds[rr[-1]][cc[-1]] + ALPHA
+
+        if 0 <= rr[-1] < MAP_DIM[0]/CELL_SIZE and 0 <= cc[-1] < MAP_DIM[1]/CELL_SIZE and range_mes != 0.0:
+            log_odds [rr[-1]][cc[-1]] = log_odds[rr[-1]][cc[-1]] + ALPHA
 
         map = self.log_odds_to_probability(log_odds)
         return map, log_odds

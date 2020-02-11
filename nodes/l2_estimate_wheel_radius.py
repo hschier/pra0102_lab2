@@ -75,7 +75,7 @@ class wheelRadiusEstimator():
             
             #YOUR CODE HERE!
             # Calculate the radius of the wheel using your change in encoder count
-            r = (2.0 * DRIVEN_DISTANCE) / ((self.del_left_encoder + self.del_right_encoder) / TICKS_PER_ROTATION)
+            r = (2.0 * DRIVEN_DISTANCE) / (((self.del_left_encoder + self.del_right_encoder) / TICKS_PER_ROTATION) * 2 * 3.14159265358979323846264338327950288419716939937510582097494459230781646286)
             print(r, self.del_left_encoder, self.del_right_encoder)
             #Reset the robot and calibration routine
             self.left_encoder_prev = None
