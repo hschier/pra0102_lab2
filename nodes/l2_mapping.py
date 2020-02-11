@@ -92,7 +92,7 @@ class OccupancyGripMap:
 
         for range, index in enumerate(scan_msg.ranges):
             angle = odom_map[2] + scan_msg.angle_min + index*scan_msg.angle_increment
-            self.np_map, self.log_odds = self.ray_trace_update (self, self.np_map, self.log_odds, odom_map[0], odom_map[1], angle, range)
+            self.np_map, self.log_odds = self.ray_trace_update (self.np_map, self.log_odds, odom_map[0], odom_map[1], angle, range)
 
         # publish the message
         self.map_msg.info.map_load_time = rospy.Time.now()
