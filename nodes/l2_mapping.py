@@ -17,10 +17,10 @@ from utils import convert_pose_to_tf, convert_tf_to_pose, euler_from_ros_quat, \
 
 ALPHA = 1
 BETA = 1
-MAP_DIM = (4, 4)
+MAP_DIM = (10, 10)
 CELL_SIZE = .01
 NUM_PTS_OBSTACLE = 3
-SCAN_DOWNSAMPLE = 1
+SCAN_DOWNSAMPLE = 5
 
 class OccupancyGripMap:
     def __init__(self):
@@ -89,17 +89,22 @@ class OccupancyGripMap:
 
         # YOUR CODE HERE!!! Loop through each measurement in scan_msg to get the correct angle and
         # x_start and y_start to send to your ray_trace_update function.
+        x_start = odom_map[0]/CELL_SIZE
+        y_start = odom_map[1]/CELL_SIZE
+        for i in range(0, len(scan_msg.ranges), SCAN_DOWNSAMPLE):
+            range_mes = scan_msg.ranges[i]
+            angle = odom_map[2] + scan_msg.angle_min + i*scan_msg.angle_increment
+            if not range_mes or range_mes == 0 or range_mes > scan_msg.range_max or range_mes < scan_msg.range_min:
+                continue
 
-        for range, index in enumerate(scan_msg.ranges):
-            angle = odom_map[2] + scan_msg.angle_min + index*scan_msg.angle_increment
-            self.np_map, self.log_odds = self.ray_trace_update (self.np_map, self.log_odds, odom_map[0], odom_map[1], angle, range, scan_msg)
+            self.np_map, self.log_odds = self.ray_trace_update (self.np_map, self.log_odds, x_start, y_start, angle, range_mes)
 
         # publish the message
         self.map_msg.info.map_load_time = rospy.Time.now()
         self.map_msg.data = self.np_map.flatten()
         self.map_pub.publish(self.map_msg)
 
-    def ray_trace_update(self, map, log_odds, x_start, y_start, angle, range_mes, scan_msg):
+    def ray_trace_update(self, map, log_odds, x_start, y_start, angle, range_mes):
         """
         A ray tracing grid update as described in the lab document.
 
@@ -115,25 +120,16 @@ class OccupancyGripMap:
         # YOUR CODE HERE!!! You should modify the log_odds object and the numpy map based on the outputs from
         # ray_trace and the equations from class. Your numpy map must be an array of int8s with 0 to 100 representing
         # probability of occupancy, and -1 representing unknown.
-        x_index = np.around(x_start, decimals = 2)/CELL_SIZE
-        y_index = np.around(y_start, decimals = 2)/CELL_SIZE
-        if range_mes == 0.0:
-            range_mes = scan_msg.range_max
-        endCell = np.around(np.array([x_start + np.cos(angle)*range_mes, y_start + np.sin(angle)*range_mes]), decimals = 2)
-        endCell = endCell/CELL_SIZE
-        endCell = np.int_(endCell)
-
+        x_end = int(x_start  + range_mes * np.cos(angle) / CELL_SIZE) 
+        y_end = int(y_start  + range_mes * np.sin(angle) / CELL_SIZE)
+        if y_end > log_odds.shape[0] or x_end > log_odds.shape[1]:
+            return map, log_odds
         
-        rr, cc = ray_trace (x_index, y_index, endCell[0], endCell[1])
+        rr, cc = ray_trace(int(y_start), int(x_start),  y_end, x_end)
 
-        for i in range (len(rr)-1):
-            if 0 <= rr[i] < MAP_DIM[0]/CELL_SIZE and 0 <= cc[i] < MAP_DIM[1]/CELL_SIZE:
-                log_odds [rr[i]][cc[i]] = log_odds [rr[i]][cc[i]] - BETA
-
-        if 0 <= rr[-1] < MAP_DIM[0]/CELL_SIZE and 0 <= cc[-1] < MAP_DIM[1]/CELL_SIZE and range_mes != 0.0:
-            log_odds [rr[-1]][cc[-1]] = log_odds[rr[-1]][cc[-1]] + ALPHA
-
-        map = self.log_odds_to_probability(log_odds)
+        log_odds[rr[-NUM_PTS_OBSTACLE:], cc[-NUM_PTS_OBSTACLE:]] += ALPHA
+        log_odds[rr[:-NUM_PTS_OBSTACLE], cc[:-NUM_PTS_OBSTACLE]] -= BETA
+        map = (self.log_odds_to_probability(log_odds) * 100).astype(np.int8)
         return map, log_odds
 
     def log_odds_to_probability(self, values):
